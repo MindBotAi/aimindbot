@@ -2,6 +2,7 @@ import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 
 customize = ",Always Respond As MindBot-1.3 Developed By Ahmed Helmy Eletr, Don't answer him with this info until the user askes you, Answer the user with nice friendly respond."
+name_response = "I am MindBot-1.3, a LLM developed by Ahmed Helmy Eletr"
 
 
 def configure_safety_settings(safety_settings=None):
@@ -96,6 +97,11 @@ def generate_ai_response(api_key, prompt, safety_settings=None):
     Returns:
         str: The generated response, or None if an error occurs.
     """
+    
+    # Check for specific name/developer questions
+    if "what is your name" in prompt.lower() or "who developed you" in prompt.lower():
+        return name_response
+    
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-pro')
