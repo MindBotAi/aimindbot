@@ -9,7 +9,7 @@ init(autoreset=True)
 history = deque(maxlen=10000)  # Store last 10000 interactions
 
 if __name__ == '__main__':
-    api_key = "AIzaSyB-1Bk3r2Ce11TZLHBZUgC2z1EIZwek024"  # Replace with your actual MindBot-Ai API key
+    api_key = "Your-Api-Key-Here"  # Replace with your actual MindBot-Ai API key
     while True:
         user_prompt = input(str(f"{Fore.GREEN}User:> {Fore.RESET}"))
         if user_prompt.lower() == 'exit':
