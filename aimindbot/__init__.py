@@ -1,1 +1,1 @@
-from .mindbot import generate_ai_response
+from .mindbot import generate_ai_response, MindBot
