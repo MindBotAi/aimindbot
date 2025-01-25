@@ -35,33 +35,15 @@ This diagram provides a simplified view of the interactions between the user, th
 ## Code Explanation (`main.py`)
 
 ```python
-import mindbotai
-import datetime
-import time
-from colorama import init, Fore
-
-# Initialize colorama for colored terminal output
-init(autoreset=True)
-
+from aimindbot import generate_ai_response
 if __name__ == '__main__':
-    api_key = "YOUR_API_KEY"  # Replace with your actual API key
-    while True:
-        user_prompt = input(str(f"{Fore.GREEN}User:> {Fore.RESET}"))
-        if user_prompt.lower() == 'exit':
-            break
-
-        start_time = time.time()
-        submit_time = datetime.datetime.now()
-        response = mindbotai.generate_ai_response(api_key, user_prompt)
-        end_time = time.time()
-        response_time = end_time - start_time
-
-        if response:
-           print(f"{Fore.BLUE}MindBot-1.3:> {Fore.RESET}{response}")
-           print(f"Submitted at: {submit_time.strftime('%Y-%m-%d %H:%M:%S')}")
-           print(f"Response Time: {response_time:.2f} seconds\n")
-        else:
-             print("Failed to get the MindBot-1.3 response.")
+    api_key = "your-api-key"  # Replace with your actual MindBot Ai API key
+    user_prompt = input("Enter your prompt: ")
+    response, time = generate_ai_response(api_key, user_prompt)
+    if response:
+        print("MindBot-1.3:", response)
+    else:
+        print("Failed to generate a response.")
 ```
 # Key Features
 
