@@ -1,0 +1,15 @@
+mindbotai
+colorama
+google-generativeai
+firebase-admin
+google-auth
+google-auth-httplib2
+google-api-python-client
+requests
+datetime
+time
+python-dotenv
+numpy
+pandas
+pillow
+scikit-learn
