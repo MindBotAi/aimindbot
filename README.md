@@ -28,7 +28,7 @@ This diagram provides a simplified view of the interactions between the user, th
     ```
 2.  **Install Required Libraries:**
     ```bash
-    pip install -r requirements.txt
+    pip install git+https://github.com/MindBotAi/aimindbot.git
     ```
     This command installs all necessary libraries listed in `requirements.txt`.
 
