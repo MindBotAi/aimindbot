@@ -69,6 +69,7 @@ def generate_ai_response(
     pdf_path: Optional[str] = None,
     image_path: Optional[str] = None,
     safety_settings: Optional[List[Dict[str, str]]] = None,
+    custom_response_prefix: Optional[str] = None, # Adding a custom prefix
 ) -> Tuple[Optional[str], Optional[datetime.datetime]]:
     if is_identity_query(prompt):
         return custom_identity_response, datetime.datetime.now()
@@ -105,8 +106,14 @@ def generate_ai_response(
                 safety_settings=safety_setting,
                 stream=False,
             )
+        
+        generated_text = response.text
 
-        return response.text, datetime.datetime.now()
+        # Add custom prefix if it is available
+        if custom_response_prefix:
+            generated_text = f"{custom_response_prefix} {generated_text}"
+
+        return generated_text, datetime.datetime.now()
     
     except Exception as e:
         print(f"Error generating response: {e}")
