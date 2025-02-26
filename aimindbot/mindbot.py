@@ -62,59 +62,63 @@ def is_identity_query(prompt: str) -> bool:
     
     return any(re.search(pattern, prompt.lower()) for pattern in identity_patterns)
 
-def generate_ai_response(
-    api_key: str,
-    prompt: str,
-    video_path: Optional[str] = None,
-    pdf_path: Optional[str] = None,
-    image_path: Optional[str] = None,
-    safety_settings: Optional[List[Dict[str, str]]] = None,
-    custom_response_prefix: Optional[str] = None, # Adding a custom prefix
-) -> Tuple[Optional[str], Optional[datetime.datetime]]:
-    if is_identity_query(prompt):
-        return custom_identity_response, datetime.datetime.now()
-
-    try:
+class MindBotModel:  # Wrapper class
+    def __init__(self, api_key: str, model_name='gemini-2.0-flash'):
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        self.model = genai.GenerativeModel(model_name)
+        self.api_key = api_key
+
+    def generate_content(
+        self,
+        prompt: str,
+        video_path: Optional[str] = None,
+        pdf_path: Optional[str] = None,
+        image_path: Optional[str] = None,
+        safety_settings: Optional[List[Dict[str, str]]] = None,
+        custom_response_prefix: Optional[str] = None,
+    ) -> Tuple[Optional[str], Optional[datetime.datetime]]:
+        if is_identity_query(prompt):
+            return custom_identity_response, datetime.datetime.now()
+
         safety_setting = _configure_safety_settings(safety_settings)
 
-        if video_path:
-            video_data = _read_file_as_base64(video_path)
-            response = model.generate_content(
-                [{"mime_type": "video/mp4", "data": video_data}, prompt],
-                safety_settings=safety_setting,
-                stream=False,
-            )
-        elif pdf_path:
-            pdf_data = _read_file_as_base64(pdf_path)
-            response = model.generate_content(
-                [{"mime_type": "application/pdf", "data": pdf_data}, prompt],
-                safety_settings=safety_setting,
-                stream=False,
-            )
-        elif image_path:
-            image_data = _read_file_as_base64(image_path)
-            response = model.generate_content(
-                [{"mime_type": "image/jpeg", "data": image_data}, prompt],
-                safety_settings=safety_setting,
-                stream=False,
-            )
-        else:
-            response = model.generate_content(
-                prompt,
-                safety_settings=safety_setting,
-                stream=False,
-            )
-        
-        generated_text = response.text
+        try:
+            if video_path:
+                video_data = _read_file_as_base64(video_path)
+                response = self.model.generate_content(
+                    [{"mime_type": "video/mp4", "data": video_data}, prompt],
+                    safety_settings=safety_setting,
+                    stream=False,
+                )
+            elif pdf_path:
+                pdf_data = _read_file_as_base64(pdf_path)
+                response = self.model.generate_content(
+                    [{"mime_type": "application/pdf", "data": pdf_data}, prompt],
+                    safety_settings=safety_setting,
+                    stream=False,
+                )
+            elif image_path:
+                image_data = _read_file_as_base64(image_path)
+                response = self.model.generate_content(
+                    [{"mime_type": "image/jpeg", "data": image_data}, prompt],
+                    safety_settings=safety_setting,
+                    stream=False,
+                )
+            else:
+                response = self.model.generate_content(
+                    prompt,
+                    safety_settings=safety_setting,
+                    stream=False,
+                )
 
-        # Add custom prefix if it is available
-        if custom_response_prefix:
-            generated_text = f"{custom_response_prefix} {generated_text}"
+            generated_text = response.text
 
-        return generated_text, datetime.datetime.now()
-    
-    except Exception as e:
-        print(f"Error generating response: {e}")
-        return None, None
+            if custom_response_prefix:
+                generated_text = f"{custom_response_prefix} {generated_text}"
+
+            return generated_text, datetime.datetime.now()
+
+        except Exception as e:
+            print(f"Error generating response: {e}")
+            return None, None
+
