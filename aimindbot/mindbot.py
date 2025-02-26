@@ -1,3 +1,4 @@
+# aimindbot.py (create this file)
 import google.generativeai as genai
 from google.generativeai.types import HarmCategory, HarmBlockThreshold
 from typing import List, Dict, Optional, Tuple
@@ -6,6 +7,7 @@ import datetime
 import re
 
 custom_identity_response = "I am an advanced AI model Called MindBot-1.3 Developed By Ahmed Helmy Eletr and designed for intelligent and insightful responses."
+DEFAULT_RESPONSE_PREFIX = "MindBot-1.3 Developed By Ahmed Helmy Eletr:"  # The ONLY prefix
 
 def _configure_safety_settings(safety_settings: Optional[List[Dict[str, str]]]) -> List[Dict[str, str]]:
     default_settings = [
@@ -62,63 +64,56 @@ def is_identity_query(prompt: str) -> bool:
     
     return any(re.search(pattern, prompt.lower()) for pattern in identity_patterns)
 
-class MindBotModel:  # Wrapper class
-    def __init__(self, api_key: str, model_name='gemini-2.0-flash'):
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model_name)
-        self.api_key = api_key
-
-    def generate_content(
-        self,
-        prompt: str,
-        video_path: Optional[str] = None,
-        pdf_path: Optional[str] = None,
-        image_path: Optional[str] = None,
-        safety_settings: Optional[List[Dict[str, str]]] = None,
-        custom_response_prefix: Optional[str] = None,
-    ) -> Tuple[Optional[str], Optional[datetime.datetime]]:
-        if is_identity_query(prompt):
-            return custom_identity_response, datetime.datetime.now()
+def generate_ai_response(
+    api_key: str,
+    prompt: str,
+    video_path: Optional[str] = None,
+    pdf_path: Optional[str] = None,
+    image_path: Optional[str] = None,
+    safety_settings: Optional[List[Dict[str, str]]] = None,
+) -> Tuple[Optional[str], Optional[datetime.datetime]]:
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-2.0-flash')
+    if is_identity_query(prompt):
+        return custom_identity_response, datetime.datetime.now()
+    try:
 
         safety_setting = _configure_safety_settings(safety_settings)
+        if video_path:
+            video_data = _read_file_as_base64(video_path)
+            response = model.generate_content(
+                [{"mime_type": "video/mp4", "data": video_data}, prompt],
+                safety_settings=safety_setting,
+                stream=False,
+            )
+        elif pdf_path:
+            pdf_data = _read_file_as_base64(pdf_path)
+            response = model.generate_content(
+                [{"mime_type": "application/pdf", "data": pdf_data}, prompt],
+                safety_settings=safety_setting,
+                stream=False,
+            )
+        elif image_path:
+            image_data = _read_file_as_base64(image_path)
+            response = model.generate_content(
+                [{"mime_type": "image/jpeg", "data": image_data}, prompt],
+                safety_settings=safety_setting,
+                stream=False,
+            )
+        else:
+            response = model.generate_content(
+                prompt,
+                safety_settings=safety_setting,
+                stream=False,
+            )
 
-        try:
-            if video_path:
-                video_data = _read_file_as_base64(video_path)
-                response = self.model.generate_content(
-                    [{"mime_type": "video/mp4", "data": video_data}, prompt],
-                    safety_settings=safety_setting,
-                    stream=False,
-                )
-            elif pdf_path:
-                pdf_data = _read_file_as_base64(pdf_path)
-                response = self.model.generate_content(
-                    [{"mime_type": "application/pdf", "data": pdf_data}, prompt],
-                    safety_settings=safety_setting,
-                    stream=False,
-                )
-            elif image_path:
-                image_data = _read_file_as_base64(image_path)
-                response = self.model.generate_content(
-                    [{"mime_type": "image/jpeg", "data": image_data}, prompt],
-                    safety_settings=safety_setting,
-                    stream=False,
-                )
-            else:
-                response = self.model.generate_content(
-                    prompt,
-                    safety_settings=safety_setting,
-                    stream=False,
-                )
+        generated_text = response.text
 
-            generated_text = response.text
+        generated_text = f"{DEFAULT_RESPONSE_PREFIX} {generated_text}" #FORCE prefix.
 
-            if custom_response_prefix:
-                generated_text = f"{custom_response_prefix} {generated_text}"
+        return generated_text, datetime.datetime.now()
 
-            return generated_text, datetime.datetime.now()
-
-        except Exception as e:
-            print(f"Error generating response: {e}")
-            return None, None
+    except Exception as e:
+        print(f"Error generating response: {e}")
+        return None, None
 
