@@ -4,6 +4,7 @@ from typing import List, Dict, Optional, Tuple
 import base64
 import os
 import datetime
+import re
 
 def _configure_safety_settings(safety_settings: Optional[List[Dict[str, str]]]) -> List[Dict[str, str]]:
     """Configures safety settings for the generative model."""
@@ -53,6 +54,22 @@ def _read_file_as_base64(file_path: str) -> str:
         return base64.standard_b64encode(file.read()).decode("utf-8")
 
 
+def is_identity_query(prompt: str) -> bool:
+    """Uses NLP techniques to check if the prompt is asking about the AI's identity."""
+    identity_patterns = [
+        r"\bwho\s+are\s+you\b",
+        r"\bwhat\s+is\s+your\s+name\b",
+        r"\bidentify\s+yourself\b",
+        r"\btell\s+me\s+about\s+yourself\b",
+        r"\bare\s+you\s+an\s+ai\b",
+        r"\bwhat\s+do\s+you\s+do\b",
+        r"\bdescribe\s+yourself\b"
+    ]
+    
+    prompt_lower = prompt.lower()
+    return any(re.search(pattern, prompt_lower) for pattern in identity_patterns)
+
+
 def generate_ai_response(
     api_key: str,
     prompt: str,
@@ -74,16 +91,14 @@ def generate_ai_response(
     Returns:
         tuple: A tuple containing the generated response and current date & time, or (None, None) if an error occurs.
     """
-    # Check if the user is asking about the bot's identity
-    identity_query = ["who are you", "what is your name", "identify yourself", "tell me about yourself"]
-    if any(query in prompt.lower() for query in identity_query):
-        return "MindBot-1.4 Developed By Ahmed Helmy Eletr", datetime.datetime.now()
+    # Check if the prompt asks about the AI's identity
+    if is_identity_query(prompt):
+        return "MindBot-1.4 An AI model Developed By Ahmed Helmy Eletr", datetime.datetime.now()
 
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.0-flash')
         safety_setting = _configure_safety_settings(safety_settings)
-
 
         # Process input files (video, PDF, image)
         if video_path:
