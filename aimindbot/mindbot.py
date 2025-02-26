@@ -6,7 +6,7 @@ import base64
 import datetime
 import re
 
-MODEL_NAME = "MindBot-1.3 Developed By Ahmed Helmy Eletr"
+MODEL_NAME = "MindBot-1.3:>  "
 custom_identity_response = MODEL_NAME  # No further explanation
 DEFAULT_RESPONSE_PREFIX = MODEL_NAME + ":"
 
