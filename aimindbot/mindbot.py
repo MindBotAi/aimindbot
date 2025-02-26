@@ -5,37 +5,7 @@ import base64
 import os
 import datetime
 
-_CUSTOMIZE_PROMPT = """The user, referred to as user, seeks responses that transcend mere wisdom and impressiveness, demanding clarity, depth, and intellectual rigor. 
-In addressing complex or abstract queries, your responses must be not only comprehensive and well-organized but also demonstrate the application of critical thinking. 
-Ensure that each answer considers the full context of the user’s inquiry, incorporating relevant nuances, deeper implications, and offering thoughtful insights. 
-Provide clear, relevant, and structured explanations that address the heart of the question, showcasing not just knowledge, but understanding that stems from a deep and analytical engagement with the subject matter.
-
-For simpler, more direct questions, the reply should be succinct and straightforward. However, maintain a sense of completeness by providing just the right amount of information without overwhelming user with excessive detail. 
-The goal is to remain concise but always informative, with an emphasis on clarity and practicality.
-
-Your tone should strike the ideal balance between professionalism and warmth—maintaining a formal yet approachable manner that reflects both expertise and friendliness. 
-Use user naturally in the conversation, but avoid repetition that could interrupt the natural flow of dialogue. The aim is to create a seamless, human-like experience where your communication feels both intelligent and comfortable.
-
-You are MindBot-1.4, an advanced AI developed by Ahmed Helmy Eletr you were released on 1st/February/2025. While capable of delivering sophisticated and complex responses, refrain from introducing yourself unless explicitly requested by user. 
-You must always respond in user's preferred language in each request. For example, if they speak with you in English, reply in English; if Arabic, reply in Arabic, and so on.
-
-Prioritize delivering responses that are not only high in quality but also deeply impactful, ensuring that every answer provides clarity and actionable insights. 
-Adapt the level of detail, complexity, and style based on the user’s specific input, but always aim to craft responses that leave user with a profound understanding. 
-Above all, your responses should be conclusive, addressing the query thoroughly, with no ambiguity left behind.
-
-Additionally, when it comes to coding or technical explanations, your responses must be precise, efficient, and written with clarity, demonstrating mastery of both high-level concepts and low-level details. 
-Explain algorithms, code structures, or technical principles with a deep understanding of their underlying logic, ensuring each explanation is both accessible and intellectually stimulating. 
-Try using emojis for most tasks, but don't use any emojis in the code. 
-
-If the user asks about the number of tokens, answer with all your features, including:
-1. **MindVision-Pro**: Processes and analyzes an unlimited number of videos, images, and PDFs.
-2. **MindPaint**: Allows users to create an unlimited number of images from prompts.
-3. **MindSearch**: Enables users to browse the internet for any information.
-4. **MindStyle**: Merges two images to create a new one with a combined style.
-5. **MindThink-A1-Mini**: A deep-thinking model that surpasses OpenAI’s `gpt-3.5-turbo` and DeepSeek's `DeepThink`.
-
-Always respond in English until the user interacts with you in another language, in which case, switch to that language automatically."""
-
+def _configure_safety_settings(safety_settings: Optional[List[Dict[str, str]]]) -> List[Dict[str, str]]:
     """Configures safety settings for the generative model."""
     default_settings = [
         {"category": HarmCategory.HARM_CATEGORY_HATE_SPEECH, "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE},
@@ -43,8 +13,10 @@ Always respond in English until the user interacts with you in another language,
         {"category": HarmCategory.HARM_CATEGORY_HARASSMENT, "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE},
         {"category": HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, "threshold": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE},
     ]
+    
     if not safety_settings:
         return default_settings
+    
     valid_categories = {
         "HARM_CATEGORY_HATE_SPEECH": HarmCategory.HARM_CATEGORY_HATE_SPEECH,
         "HARM_CATEGORY_SEXUALLY_EXPLICIT": HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
@@ -57,20 +29,21 @@ Always respond in English until the user interacts with you in another language,
         "BLOCK_MEDIUM_AND_ABOVE": HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
         "BLOCK_ONLY_HIGH": HarmBlockThreshold.BLOCK_ONLY_HIGH,
     }
+    
     merged_settings = default_settings[:]
     for setting in safety_settings:
-        if "category" not in setting:
-            raise ValueError("Safety setting must contain 'category'")
-        if "threshold" not in setting:
-            raise ValueError("Safety setting must contain 'threshold'")
+        if "category" not in setting or "threshold" not in setting:
+            raise ValueError("Safety setting must contain 'category' and 'threshold'")
         category = setting["category"]
         threshold = setting["threshold"]
         if category not in valid_categories:
             raise ValueError(f"Invalid harm category: {category}")
         if threshold not in valid_thresholds:
             raise ValueError(f"Invalid block threshold: {threshold}")
+        
         merged_settings = [item for item in merged_settings if item["category"] != valid_categories[category]]
         merged_settings.append({"category": valid_categories[category], "threshold": valid_thresholds[threshold]})
+    
     return merged_settings
 
 
@@ -103,44 +76,46 @@ def generate_ai_response(
     """
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini-2.0-flash') if video_path or pdf_path or image_path else genai.GenerativeModel('gemini-2.0-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash')
         safety_setting = _configure_safety_settings(safety_settings)
-        full_prompt = f"{_CUSTOMIZE_PROMPT} {prompt}"
 
-        # Process video
+        # Check if the user is asking about the bot's identity
+        bot_identity_trigger = ["who are you", "what is your name", "identify yourself"]
+        if any(trigger in prompt.lower() for trigger in bot_identity_trigger):
+            response_text = "I am MindBot-1.4, an advanced AI developed by Ahmed Helmy Eletr."
+            return response_text, datetime.datetime.now()
+
+        # Process input files (video, PDF, image)
         if video_path:
             video_data = _read_file_as_base64(video_path)
             response = model.generate_content(
-                [{"mime_type": "video/mp4", "data": video_data}, full_prompt],
+                [{"mime_type": "video/mp4", "data": video_data}, prompt],
                 safety_settings=safety_setting,
                 stream=False,
             )
         elif pdf_path:
-            # Process PDF
             pdf_data = _read_file_as_base64(pdf_path)
             response = model.generate_content(
-                [{"mime_type": "application/pdf", "data": pdf_data}, full_prompt],
+                [{"mime_type": "application/pdf", "data": pdf_data}, prompt],
                 safety_settings=safety_setting,
                 stream=False,
             )
         elif image_path:
-            # Process image
             image_data = _read_file_as_base64(image_path)
             response = model.generate_content(
-                [{"mime_type": "image/jpeg", "data": image_data}, full_prompt],
+                [{"mime_type": "image/jpeg", "data": image_data}, prompt],
                 safety_settings=safety_setting,
                 stream=False,
             )
         else:
-            # Process text
             response = model.generate_content(
-                full_prompt,
+                prompt,
                 safety_settings=safety_setting,
                 stream=False,
             )
 
-        current_date_time = datetime.datetime.now()
-        return response.text, current_date_time
+        return response.text, datetime.datetime.now()
+    
     except Exception as e:
         print(f"Error generating response: {e}")
         return None, None
