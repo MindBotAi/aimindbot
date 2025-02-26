@@ -103,7 +103,7 @@ def generate_ai_response(
     """
     try:
         genai.configure(api_key=api_key)
-        model = genai.GenerativeModel('gemini2.0-flash') if video_path or pdf_path or image_path else genai.GenerativeModel('gemini2.0-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash') if video_path or pdf_path or image_path else genai.GenerativeModel('gemini-2.0-flash')
         safety_setting = _configure_safety_settings(safety_settings)
         full_prompt = f"{_CUSTOMIZE_PROMPT} {prompt}"
 
