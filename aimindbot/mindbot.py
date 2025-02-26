@@ -74,16 +74,16 @@ def generate_ai_response(
     Returns:
         tuple: A tuple containing the generated response and current date & time, or (None, None) if an error occurs.
     """
+    # Check if the user is asking about the bot's identity
+    identity_query = ["who are you", "what is your name", "identify yourself", "tell me about yourself"]
+    if any(query in prompt.lower() for query in identity_query):
+        return "MindBot-1.4 Developed By Ahmed Helmy Eletr", datetime.datetime.now()
+
     try:
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-2.0-flash')
         safety_setting = _configure_safety_settings(safety_settings)
 
-        # Check if the user is asking about the bot's identity
-        bot_identity_trigger = ["who are you", "what is your name", "identify yourself"]
-        if any(trigger in prompt.lower() for trigger in bot_identity_trigger):
-            response_text = "I am MindBot-1.4, an advanced AI developed by Ahmed Helmy Eletr."
-            return response_text, datetime.datetime.now()
 
         # Process input files (video, PDF, image)
         if video_path:
