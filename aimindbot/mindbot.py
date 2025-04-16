@@ -6,9 +6,9 @@ import base64
 import datetime
 import re
 
-MODEL_NAME = "MindBot-1.3:>  "
-custom_identity_response = MODEL_NAME  # No further explanation
+MODEL_NAME = "MindBot-1.5-Pro"
 DEFAULT_RESPONSE_PREFIX = MODEL_NAME + ":"
+DEVELOPER_NAME = "Ahmed Helmy Eletr" # Define the developer's name
 
 def _configure_safety_settings(safety_settings: Optional[List[Dict[str, str]]]) -> List[Dict[str, str]]:
     default_settings = [
@@ -59,8 +59,9 @@ def is_identity_query(prompt: str) -> bool:
         r"\bidentify\s+yourself\b",
         r"\btell\s+me\s+about\s+yourself\b",
         r"\bare\s+you\s+an\s+ai\b",
-        r"\bwhat\s+do\s+you\s+do\b",
-        r"\bdescribe\s+yourself\b"
+        r"\bwho\s+(made|created|developed)\s+you\b",
+        r"\byour\s+creator\b",
+        r"\byour\s+developer\b"
     ]
     return any(re.search(pattern, prompt.lower()) for pattern in identity_patterns)
 
@@ -76,45 +77,54 @@ def generate_ai_response(
     genai.configure(api_key=api_key)
     model = genai.GenerativeModel('gemini-2.0-flash')
 
+    original_prompt = prompt
+
     if is_identity_query(prompt):
-        return custom_identity_response, datetime.datetime.now()  # Return JUST the name
+        system_instruction = f"You are an AI assistant called {MODEL_NAME}. When asked about who created or developed you, explain that you were developed by {DEVELOPER_NAME}."
+        prompt = f"{system_instruction}\n\nUser prompt: {original_prompt}"
+        print(f"\n[Debug] Detected identity query. Modified prompt:\n{prompt}\n")
 
     try:
         safety_setting = _configure_safety_settings(safety_settings)
+        content_to_send = []
 
+        input_provided = False
         if video_path:
             video_data = _read_file_as_base64(video_path)
-            response = model.generate_content(
-                [{"mime_type": "video/mp4", "data": video_data}, prompt],
-                safety_settings=safety_setting,
-                stream=False,
-            )
+            content_to_send.append({"mime_type": "video/mp4", "data": video_data})
+            input_provided = True
         elif pdf_path:
             pdf_data = _read_file_as_base64(pdf_path)
-            response = model.generate_content(
-                [{"mime_type": "application/pdf", "data": pdf_data}, prompt],
-                safety_settings=safety_setting,
-                stream=False,
-            )
+            content_to_send.append({"mime_type": "application/pdf", "data": pdf_data})
+            input_provided = True
         elif image_path:
             image_data = _read_file_as_base64(image_path)
-            response = model.generate_content(
-                [{"mime_type": "image/jpeg", "data": image_data}, prompt],
-                safety_settings=safety_setting,
-                stream=False,
-            )
-        else:
-            response = model.generate_content(
-                prompt,
-                safety_settings=safety_setting,
-                stream=False,
-            )
+            content_to_send.append({"mime_type": "image/jpeg", "data": image_data})
+            input_provided = True
+
+        content_to_send.append(prompt)
+
+        response = model.generate_content(
+            content_to_send,
+            safety_settings=safety_setting,
+            stream=False,
+        )
 
         generated_text = response.text
-        generated_text = f"{DEFAULT_RESPONSE_PREFIX} {generated_text}"  # FORCE the standard prefix
+
+        if not is_identity_query(original_prompt) or MODEL_NAME.strip() not in generated_text:
+            generated_text = f"{DEFAULT_RESPONSE_PREFIX} {generated_text}"
 
         return generated_text, datetime.datetime.now()
 
     except Exception as e:
         print(f"Error generating response: {e}")
+        try:
+            if response and response.parts:
+                print("Response parts:", response.parts)
+            if response and response.prompt_feedback:
+                print("Prompt feedback:", response.prompt_feedback)
+        except Exception as inner_e:
+            print(f"Error accessing response details: {inner_e}")
+
         return None, None
